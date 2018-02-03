@@ -4,40 +4,51 @@ import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 
-import static android.R.id.message;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "MainActivity";
 
     private Socket mSocket;
 
-    private final String SERVER_URI = "http://169.234.95.87:3000";
+    private final String SERVER_URI = "https://simple-umessage-server.herokuapp.com";
     private EditText sendMessageView;
     private TextView currentReceivedMessageView;
+    private ListView messageListView;
     private Button sendButton;
+
+    private ArrayList<String> messages;
+    private ArrayAdapter<String> messageListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        messages = new ArrayList<>();
+
         setContentView(R.layout.activity_main);
 
-        sendMessageView = (EditText) findViewById(R.id.send_message_view);
-        currentReceivedMessageView = (TextView) findViewById(R.id.display_message_view);
+        sendMessageView = (EditText) findViewById(R.id.message_input);
+        messageListView = (ListView) findViewById(R.id.messages_view);
+
+        messageListAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
+        messageListView.setAdapter(messageListAdapter);
+
         sendButton = (Button) findViewById(R.id.send_button);
     }
 
@@ -56,7 +67,8 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void run() {
                     String message = (String) args[0];
-                    currentReceivedMessageView.setText(message);
+                    messages.add(message);
+                    messageListAdapter.notifyDataSetChanged();
                 }
             });
         }
@@ -102,9 +114,13 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendMessage(String message) {
         if(message.length() > 0) {
+           // messages.add(message);
             Log.d(TAG, "SENDING: " + message);
             sendMessageView.setText("");
             mSocket.emit("chat message", message);
+
+            SmsManager smsManager = SmsManager.getDefault();
+//            smsManager.sendTextMessage("4089817280", null,
         }
     }
 
@@ -120,6 +136,5 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         builder.show();
-
     }
 }
