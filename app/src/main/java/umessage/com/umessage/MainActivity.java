@@ -5,7 +5,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,11 +12,14 @@ import android.widget.TextView;
 
 import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
-import com.github.nkzawa.socketio.client.Manager;
 import com.github.nkzawa.socketio.client.Socket;
 
-import java.net.URI;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.net.URISyntaxException;
+
+import static android.R.id.message;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "MainActivity";
@@ -46,28 +48,43 @@ public class MainActivity extends AppCompatActivity {
         initializeSendButtonListener();
     }
 
-    private void connectSocket() {
-        try {
-
-            mSocket = IO.socket(SERVER_URI);
-            mSocket.on(Socket.EVENT_CONNECT_ERROR, new Emitter.Listener() {
+    private Emitter.Listener onNewMessage = new Emitter.Listener() {
+        @Override
+        public void call(final Object... args) {
+            Log.d(TAG, "WOW I GOT SOMETHING");
+            runOnUiThread(new Runnable() {
                 @Override
-                public void call(Object... args) {
-                    Log.d(TAG, "Failed to connect to " + SERVER_URI);
-                    mSocket.disconnect();
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            displaySocketFailureDialog();
-                        }
-                    });
-
+                public void run() {
+                    String message = (String) args[0];
+                    currentReceivedMessageView.setText(message);
                 }
             });
+        }
+    };
+
+    private Emitter.Listener onConnectionFailure = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Log.d(TAG, "Failed to connect to " + SERVER_URI);
+            mSocket.disconnect();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    displaySocketFailureDialog();
+                }
+            });
+        }
+    };
+
+    private void connectSocket() {
+        try {
+            mSocket = IO.socket(SERVER_URI);
 
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+        mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectionFailure);
+        mSocket.on("chat message", onNewMessage);
 
         mSocket.connect();
     }
