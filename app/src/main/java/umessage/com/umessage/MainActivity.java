@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
             mSocket.emit("chat message", message);
 
             SmsManager smsManager = SmsManager.getDefault();
-//            smsManager.sendTextMessage("4089817280", null,
+            smsManager.sendTextMessage("4089817280", null, message, null, null);
         }
     }
 
