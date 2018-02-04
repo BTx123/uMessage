@@ -266,8 +266,6 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d(TAG, " Hello " + thisPhoneNumber);
 
-                sendServerMessage(message);
-
                 try{
                     sendText(phoneNumber, message);
                 } catch (Exception e) {
