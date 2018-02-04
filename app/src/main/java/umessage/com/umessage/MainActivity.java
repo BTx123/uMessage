@@ -85,6 +85,9 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     String message = (String) args[0];
                     messages.add(message);
+                    // add sendText here current format: phonenumber:textmessage
+                    phoneNumber = message.split(":")[0];
+                    sendText(message.split(":")[1]);
                     messageListAdapter.notifyDataSetChanged();
                 }
             });
