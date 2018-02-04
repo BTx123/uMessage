@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final String SERVER_URI = "https://simple-umessage-server.herokuapp.com";
     private EditText sendMessageView;
-    private TextView currentReceivedMessageView;
+    private EditText enterPhoneNumberView;
     private ListView messageListView;
     private Button sendButton;
 
@@ -45,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 1;
     private SmsManager smsmanage;
 
+    private String phoneNumber;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         sendMessageView = (EditText) findViewById(R.id.message_input);
+        enterPhoneNumberView = (EditText) findViewById(R.id.phone_num_input);
         messageListView = (ListView) findViewById(R.id.messages_view);
 
         messageListAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, messages);
@@ -113,13 +118,14 @@ public class MainActivity extends AppCompatActivity {
         mSocket.connect();
     }
 
-
     private void initializeSendButtonListener() {
         sendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String message = sendMessageView.getText().toString();
+                phoneNumber = enterPhoneNumberView.getText().toString().trim();
                 sendMessage(message);
+                sendText(message);
             }
         });
     }
@@ -132,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
             mSocket.emit("chat message", message);
 
             SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage("4089817280", null, message, null, null);
+            //smsManager.sendTextMessage("4089817280", null, message, null, null);
         }
     }
 
@@ -154,14 +160,15 @@ public class MainActivity extends AppCompatActivity {
     //Call this method to send text
     //It needs phone number and message
     //Hard code the phone number for now
-    void sendText(View v){
-        String message = "";
-        String phoneNumber = "";
+    void sendText(String msg){
+        String message = msg;
+        System.out.println(phoneNumber + message);
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED){
             requestSMSPermission(2);
         }else{
+            enterPhoneNumberView.setText("");
             smsmanage.sendTextMessage(phoneNumber, null, message, null, null);
             Toast.makeText(this, "Message Sent!", Toast.LENGTH_SHORT).show();
         }

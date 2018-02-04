@@ -26,9 +26,18 @@
         android:orientation="horizontal" >
 
         <EditText
+            android:id="@+id/phone_num_input"
+            android:layout_width="15dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity=""
+            />
+
+
+        <EditText
             android:id="@+id/message_input"
             android:layout_weight="0.7"
-            android:layout_width="0dp"
+            android:layout_width="20dp"
             android:layout_height="match_parent"
             android:inputType="text" />
 
@@ -38,7 +47,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginRight="20dp"
-            android:text="Send"/>
+            android:text="Send" />
 
     </LinearLayout>
 
