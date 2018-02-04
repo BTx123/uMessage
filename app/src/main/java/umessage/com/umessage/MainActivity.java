@@ -48,11 +48,21 @@ public class MainActivity extends AppCompatActivity {
     private static final int READ_SMS_PERMISSIONS_REQUEST = 1;
     private static final int SEND_SMS_PERMISSIONS_REQUEST = 1;
     private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 1;
+
     private SmsManager smsmanage;
+
+    private static MainActivity inst = MainActivity.instance();
 
     private String phoneNumber;
 
-
+    public static MainActivity instance(){
+        return inst;
+    }
+    public void updateList(final String smsMessage) {
+        messageListAdapter.insert(smsMessage, 0);
+        messageListAdapter.notifyDataSetChanged();
+        System.out.println("updated list");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,9 +89,10 @@ public class MainActivity extends AppCompatActivity {
         super.onStart();
         connectSocket();
         initializeSendButtonListener();
+        inst = this;
     }
 
-    
+
 
     private Emitter.Listener onNewMessage = new Emitter.Listener() {
         @Override
@@ -145,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendMessage(String message) {
         if(message.length() > 0) {
-           // messages.add(message);
+            // messages.add(message);
             Log.d(TAG, "SENDING: " + message);
             sendMessageView.setText("");
             mSocket.emit("chat message", message);
@@ -239,6 +250,7 @@ public class MainActivity extends AppCompatActivity {
                 //Grant Permission for Recieving SMS
             }
         }
+
     }
 
 }
