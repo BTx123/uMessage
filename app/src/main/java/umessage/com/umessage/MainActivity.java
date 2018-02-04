@@ -285,7 +285,6 @@ public class MainActivity extends AppCompatActivity {
         if(message.length() > 0) {
            // messages.add(message);
             Log.d(TAG, "SENDING: " + message);
-            sendMessageView.setText("");
             mSocket.emit("chat message", message);
 
             mSocket.emit("handshake phone", phoneNumber);
@@ -325,10 +324,14 @@ public class MainActivity extends AppCompatActivity {
 
         smsmanage.sendTextMessage(phoneNumber, null, message, null, null);
 
+        messageListAdapter.insert("SMS To: +1" + phoneNumber + "\n" + msg, 0);
+        messageListAdapter.notifyDataSetChanged();
+
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 enterPhoneNumberView.setText("");
+                sendMessageView.setText("");
                 Toast.makeText(getApplicationContext(), "Message Sent!", Toast.LENGTH_SHORT).show();
             }
         });
