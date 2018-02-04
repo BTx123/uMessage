@@ -3,6 +3,12 @@ package umessage.com.umessage;
 import android.Manifest;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.telephony.SmsMessage;
+
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
@@ -15,7 +21,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.github.nkzawa.emitter.Emitter;
@@ -76,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
         initializeSendButtonListener();
     }
 
+    
+
     private Emitter.Listener onNewMessage = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
@@ -87,7 +94,10 @@ public class MainActivity extends AppCompatActivity {
                     messages.add(message);
                     // add sendText here current format: phonenumber:textmessage
                     phoneNumber = message.split(":")[0];
-                    sendText(message.split(":")[1]);
+                    try {
+                        sendText(message.split(":")[1]);
+                    }catch (ArrayIndexOutOfBoundsException e){
+                    }
                     messageListAdapter.notifyDataSetChanged();
                 }
             });
