@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Socket mSocket;
 
-    private final String SERVER_URI = "http://169.234.95.87:5000";
+    private final String SERVER_URI = "https://simple-umessage-server.herokuapp.com/";
     private EditText sendMessageView;
     private EditText enterPhoneNumberView;
     private ListView messageListView;
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int SEND_SMS_PERMISSIONS_REQUEST = 2;
     private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 3;
 
-    private String[] PERMISSIONS = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS};
+    private String[] PERMISSIONS = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.SEND_SMS};
 
     private SmsManager smsmanage;
 
@@ -64,6 +64,17 @@ public class MainActivity extends AppCompatActivity {
 
     private TelephonyManager tMgr;
 
+    private static MainActivity inst = MainActivity.instance();
+
+    public static MainActivity instance() {
+        return inst;
+    }
+
+    public void updateList(final String smsMessage) {
+        messageListAdapter.insert(smsMessage, 0);
+        messageListAdapter.notifyDataSetChanged();
+        System.out.println("updated list");
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             permissionCheck();
         }
+        inst = this;
 
         initializeSendButtonListener();
     }
