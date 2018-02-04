@@ -4,10 +4,8 @@ import android.Manifest;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.telephony.SmsMessage;
+import android.os.Build;
 
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -15,6 +13,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.telephony.SmsManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -27,6 +26,9 @@ import com.github.nkzawa.emitter.Emitter;
 import com.github.nkzawa.socketio.client.IO;
 import com.github.nkzawa.socketio.client.Socket;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 
@@ -36,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Socket mSocket;
 
-    private final String SERVER_URI = "https://simple-umessage-server.herokuapp.com";
+    private final String SERVER_URI = "http://169.234.95.87:5000";
     private EditText sendMessageView;
     private EditText enterPhoneNumberView;
     private ListView messageListView;
@@ -45,13 +47,22 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<String> messages;
     private ArrayAdapter<String> messageListAdapter;
 
+    private static final int REQUEST_READ_PHONE_STATE = 0;
+    private static final int ALL_PERMISSIONS = 1;
+
     private static final int READ_SMS_PERMISSIONS_REQUEST = 1;
-    private static final int SEND_SMS_PERMISSIONS_REQUEST = 1;
-    private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 1;
+    private static final int SEND_SMS_PERMISSIONS_REQUEST = 2;
+    private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 3;
+
+    private String[] PERMISSIONS = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.SEND_SMS};
+
     private SmsManager smsmanage;
 
     private String phoneNumber;
 
+    private String thisPhoneNumber;
+
+    private TelephonyManager tMgr;
 
 
     @Override
@@ -70,33 +81,94 @@ public class MainActivity extends AppCompatActivity {
         messageListView.setAdapter(messageListAdapter);
 
         sendButton = (Button) findViewById(R.id.send_button);
-        requestSMSPermission(4);
+       // requestSMSPermission(4);
         smsmanage = SmsManager.getDefault();
+
+        permissionCheck();
+
+        tMgr = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        connectSocket();
+
+        if(hasPermissions(this, PERMISSIONS)) {
+            try{
+                thisPhoneNumber = tMgr.getLine1Number();
+                Log.d(TAG, "My phone number: " + thisPhoneNumber);
+            } catch (SecurityException e) {
+                permissionCheck();
+            }
+
+            connectSocket();
+
+        } else {
+            permissionCheck();
+        }
+
         initializeSendButtonListener();
     }
 
+    public static boolean hasPermissions(Context context, String... permissions) {
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && context != null && permissions != null) {
+            for (String permission : permissions) {
+                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private void permissionCheck() {
+        if(!hasPermissions(this, PERMISSIONS)) {
+            ActivityCompat.requestPermissions(this, PERMISSIONS, ALL_PERMISSIONS);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_READ_PHONE_STATE:
+                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    try {
+                        thisPhoneNumber = tMgr.getLine1Number();
+                    } catch (SecurityException e) {
+                        e.printStackTrace();
+                    }
+                    sendPhoneNumberToServer();
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        connectSocket();
+    }
     
 
     private Emitter.Listener onNewMessage = new Emitter.Listener() {
         @Override
         public void call(final Object... args) {
-            Log.d(TAG, "WOW I GOT SOMETHING");
+            Log.d(TAG, "Received a message");
+
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     String message = (String) args[0];
                     messages.add(message);
                     // add sendText here current format: phonenumber:textmessage
-                    phoneNumber = message.split(":")[0];
-                    try {
-                        sendText(message.split(":")[1]);
-                    }catch (ArrayIndexOutOfBoundsException e){
+
+                    if(message.indexOf(':') != -1) {
+                        phoneNumber = message.split(":")[0];
+                        try {
+                            sendText(phoneNumber, message.split(":")[1]);
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
                     }
                     messageListAdapter.notifyDataSetChanged();
                 }
@@ -118,6 +190,39 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private Emitter.Listener onConnectionSuccess = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            if(hasPermissions(getApplicationContext(), PERMISSIONS)) {
+                Log.d(TAG, "Sending phone number " + thisPhoneNumber + " to server.");
+                sendPhoneNumberToServer();
+            }
+        }
+    };
+
+    private Emitter.Listener onWebToSMS = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Log.d(TAG, "Received a text sending command!" + args[0].toString());
+            JSONObject fullTokens = (JSONObject) args[0];
+
+            //Format: SMS:originNumber:destNumber:message
+
+
+            String destinationNumber = "";
+            String message = "";
+            try{
+                destinationNumber = fullTokens.getString("destNumber");
+                message = fullTokens.getString("msg");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            Log.d(TAG, "Sending msg to " + destinationNumber);
+            sendText(destinationNumber, message);
+        }
+    };
+
     private void connectSocket() {
         try {
             mSocket = IO.socket(SERVER_URI);
@@ -125,10 +230,19 @@ public class MainActivity extends AppCompatActivity {
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+        //Event listeners.
         mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectionFailure);
+        mSocket.on(Socket.EVENT_CONNECT, onConnectionSuccess);
         mSocket.on("chat message", onNewMessage);
+        mSocket.on("web to sms", onWebToSMS);
 
         mSocket.connect();
+
+        Log.d(TAG, "Attempting connection...");
+    }
+
+    private void sendPhoneNumberToServer() {
+        mSocket.emit("handshake phone", thisPhoneNumber);
     }
 
     private void initializeSendButtonListener() {
@@ -137,18 +251,29 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 String message = sendMessageView.getText().toString();
                 phoneNumber = enterPhoneNumberView.getText().toString().trim();
-                sendMessage(message);
-                sendText(message);
+
+                Log.d(TAG, " Hello " + thisPhoneNumber);
+
+                sendServerMessage(message);
+
+                try{
+                    sendText(phoneNumber, message);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
             }
         });
     }
 
-    private void sendMessage(String message) {
+    private void sendServerMessage(String message) {
         if(message.length() > 0) {
            // messages.add(message);
             Log.d(TAG, "SENDING: " + message);
             sendMessageView.setText("");
             mSocket.emit("chat message", message);
+
+            mSocket.emit("handshake phone", phoneNumber);
 
             SmsManager smsManager = SmsManager.getDefault();
             //smsManager.sendTextMessage("4089817280", null, message, null, null);
@@ -173,18 +298,26 @@ public class MainActivity extends AppCompatActivity {
     //Call this method to send text
     //It needs phone number and message
     //Hard code the phone number for now
-    void sendText(String msg){
+    void sendText(String phoneNumber, String msg){
+        if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            permissionCheck();
+        }
+
         String message = msg;
         System.out.println(phoneNumber + message);
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
-                != PackageManager.PERMISSION_GRANTED){
-            requestSMSPermission(2);
-        }else{
-            enterPhoneNumberView.setText("");
-            smsmanage.sendTextMessage(phoneNumber, null, message, null, null);
-            Toast.makeText(this, "Message Sent!", Toast.LENGTH_SHORT).show();
-        }
+
+        smsmanage.sendTextMessage(phoneNumber, null, message, null, null);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                enterPhoneNumberView.setText("");
+                Toast.makeText(getApplicationContext(), "Message Sent!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
     }
 
     //Permissions:
