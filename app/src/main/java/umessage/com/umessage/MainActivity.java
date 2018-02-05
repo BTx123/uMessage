@@ -165,7 +165,44 @@ public class MainActivity extends AppCompatActivity {
 
         connectSocket();
     }
-    
+
+    private Emitter.Listener onConnectionFailure = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Log.d(TAG, "Failed to connect to " + SERVER_URI);
+            mSocket.disconnect();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    displaySocketFailureDialog();
+                }
+            });
+        }
+    };
+
+    private Emitter.Listener onConnectionSuccess = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            if(hasPermissions(getApplicationContext(), PERMISSIONS)) {
+                Log.d(TAG, "Sending phone number " + thisPhoneNumber + " to server.");
+                sendPhoneNumberToServer();
+            }
+        }
+    };
+
+    private Emitter.Listener onDisconnect = new Emitter.Listener() {
+        @Override
+        public void call(Object... args) {
+            Log.d(TAG, "Disconnected");
+            mSocket.disconnect();
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    displaySocketDisconnectDialog();
+                }
+            });
+        }
+    };
 
     private Emitter.Listener onNewMessage = new Emitter.Listener() {
         @Override
@@ -193,29 +230,6 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private Emitter.Listener onConnectionFailure = new Emitter.Listener() {
-        @Override
-        public void call(Object... args) {
-            Log.d(TAG, "Failed to connect to " + SERVER_URI);
-            mSocket.disconnect();
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    displaySocketFailureDialog();
-                }
-            });
-        }
-    };
-
-    private Emitter.Listener onConnectionSuccess = new Emitter.Listener() {
-        @Override
-        public void call(Object... args) {
-            if(hasPermissions(getApplicationContext(), PERMISSIONS)) {
-                Log.d(TAG, "Sending phone number " + thisPhoneNumber + " to server.");
-                sendPhoneNumberToServer();
-            }
-        }
-    };
 
     private Emitter.Listener onWebToSMS = new Emitter.Listener() {
         @Override
@@ -250,6 +264,7 @@ public class MainActivity extends AppCompatActivity {
         //Event listeners.
         mSocket.on(Socket.EVENT_CONNECT_ERROR, onConnectionFailure);
         mSocket.on(Socket.EVENT_CONNECT, onConnectionSuccess);
+        mSocket.on(Socket.EVENT_DISCONNECT, onDisconnect);
         mSocket.on("chat message", onNewMessage);
         mSocket.on("web to sms", onWebToSMS);
 
@@ -308,11 +323,29 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void displaySocketDisconnectDialog() {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setCancelable(false);
+        builder.setTitle("Disconnected!");
+        builder.setMessage("Your phone has disconnected from " + SERVER_URI +
+                        ". Restart uMessage to reestablish your connection. " +
+                        "You can still send texts, but you will be unable to send " +
+                        "through the uMessage web application until you restart and " +
+                        "reestablish your connection.");
+        builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+
+            }
+        });
+        builder.show();
+    }
+
     //Here is the Sendtext number!
     //Call this method to send text
     //It needs phone number and message
     //Hard code the phone number for now
-    void sendText(String phoneNumber, String msg){
+    void sendText(final String phoneNumber, final String msg){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS)
                 != PackageManager.PERMISSION_GRANTED) {
             permissionCheck();
@@ -324,12 +357,12 @@ public class MainActivity extends AppCompatActivity {
 
         smsmanage.sendTextMessage(phoneNumber, null, message, null, null);
 
-        messageListAdapter.insert("SMS To: +1" + phoneNumber + "\n" + msg, 0);
-        messageListAdapter.notifyDataSetChanged();
-
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                messageListAdapter.insert("SMS To: +1" + phoneNumber + "\n" + msg, 0);
+                messageListAdapter.notifyDataSetChanged();
+
                 enterPhoneNumberView.setText("");
                 sendMessageView.setText("");
                 Toast.makeText(getApplicationContext(), "Message Sent!", Toast.LENGTH_SHORT).show();
