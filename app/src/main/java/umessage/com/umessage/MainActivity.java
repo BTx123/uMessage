@@ -50,10 +50,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_READ_PHONE_STATE = 0;
     private static final int ALL_PERMISSIONS = 1;
 
-    private static final int READ_SMS_PERMISSIONS_REQUEST = 1;
-    private static final int SEND_SMS_PERMISSIONS_REQUEST = 2;
-    private static final int RECIEVE_SMS_PERMISSIONS_REQUEST = 3;
-
     private String[] PERMISSIONS = {Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.SEND_SMS};
 
     private SmsManager smsmanage;
@@ -301,11 +297,7 @@ public class MainActivity extends AppCompatActivity {
            // messages.add(message);
             Log.d(TAG, "SENDING: " + message);
             mSocket.emit("chat message", message);
-
             mSocket.emit("handshake phone", phoneNumber);
-
-            SmsManager smsManager = SmsManager.getDefault();
-            //smsManager.sendTextMessage("4089817280", null, message, null, null);
         }
     }
 
@@ -317,7 +309,6 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-
             }
         });
         builder.show();
@@ -335,7 +326,6 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("Dismiss", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-
             }
         });
         builder.show();
