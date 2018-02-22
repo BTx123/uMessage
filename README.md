@@ -6,7 +6,9 @@ A text messaging app for Android that facilitates the uMessage online text messa
 [uMessage Server repo](https://github.com/mrdanshih/uMessage-Server)
 
 The uMessage client mobile app
+
 <img src="screenshot.png" alt="0" width="200"/> 
 
 The uMessage website for sending text messages remotely
+
 <img src="screenshot.png" alt="0" width="200"/> 
