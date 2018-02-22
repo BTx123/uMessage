@@ -11,4 +11,4 @@ The uMessage client mobile app
 
 The uMessage website for sending text messages remotely
 
-<img src="screenshot.png" alt="0" width="200"/> 
+<img src="webapp_screenshot.png" alt="0" width="200"/> 
